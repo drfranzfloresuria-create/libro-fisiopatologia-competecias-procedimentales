@@ -1,0 +1,77 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4. Algoritmo de Resucitación</title>
+    <style>
+        :root { --bg: #2c3e50; --card: #ecf0f1; --text: #2c3e50; --radius: 8px; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; display: flex; justify-content: center; }
+        .container { max-width: 800px; width: 100%; background: var(--card); padding: 25px; border-radius: var(--radius); }
+        h1 { text-align: center; margin-top: 0; font-size: 1.5em; color: var(--text); }
+        .monitor { background: #000; padding: 20px; border-radius: var(--radius); display: flex; justify-content: space-around; margin-bottom: 20px; border: 3px solid #7f8c8d; }
+        .vital { text-align: center; }
+        .v-label { color: #bdc3c7; font-size: 0.8em; font-weight: bold; }
+        .v-val { font-family: monospace; font-size: 2em; font-weight: bold; }
+        .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .btn { padding: 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
+        .btn:hover { opacity: 0.8; }
+        .b-fluid { background: #3498db; } .b-vaso { background: #9b59b6; } .b-bb { background: #e67e22; } .b-diu { background: #e74c3c; } .b-vent { background: #34495e; }
+        .feedback { background: #fff; padding: 15px; border-left: 5px solid #3498db; border-radius: 4px; font-weight: bold; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>4. Resucitación: "Rápido, Lleno y Apretado"</h1>
+    <p style="text-align: center; font-size: 0.9em;">Paciente con taponamiento cardíaco grave. Estabilice antes de la pericardiocentesis.</p>
+    
+    <div class="monitor">
+        <div class="vital"><div class="v-label">PRESION ARTERIAL</div><div id="bp" class="v-val" style="color:#e74c3c;">85/50</div></div>
+        <div class="vital"><div class="v-label">FRECUENCIA CARDÍACA</div><div id="hr" class="v-val" style="color:#f1c40f;">135</div></div>
+        <div class="vital"><div class="v-label">GASTO CARDÍACO</div><div id="co" class="v-val" style="color:#e74c3c;">Crítico</div></div>
+    </div>
+
+    <div class="actions">
+        <button class="btn b-fluid" onclick="action('fluid')">Cristaloides IV (Lleno)</button>
+        <button class="btn b-vaso" onclick="action('vaso')">Noradrenalina (Apretado)</button>
+        <button class="btn b-bb" onclick="action('bb')">Betabloqueantes (Bajar FC)</button>
+        <button class="btn b-diu" onclick="action('diu')">Diuréticos (Furosemida)</button>
+        <button class="btn b-vent" style="grid-column: 1 / -1;" onclick="action('vent')">Intubación + Presión Positiva (VPP)</button>
+    </div>
+
+    <div id="feedback" class="feedback">Seleccione una intervención médica.</div>
+</div>
+<script>
+    function action(type) {
+        const bp = document.getElementById('bp');
+        const hr = document.getElementById('hr');
+        const co = document.getElementById('co');
+        const fb = document.getElementById('feedback');
+
+        if(type === 'fluid') {
+            bp.innerText = "100/60"; bp.style.color = "#f1c40f";
+            co.innerText = "Bajo"; co.style.color = "#f1c40f";
+            fb.style.borderColor = "#3498db";
+            fb.innerHTML = "✅ <strong>Correcto (Lleno):</strong> La optimización volumétrica eleva la presión venosa intracavitaria, empujando contra el líquido pericárdico para mantener una mínima presión transmural y garantizar precarga.";
+        } else if(type === 'vaso') {
+            bp.innerText = "110/70"; bp.style.color = "#2ecc71";
+            fb.style.borderColor = "#9b59b6";
+            fb.innerHTML = "✅ <strong>Correcto (Apretado):</strong> El soporte vasopresor mantiene la resistencia vascular periférica, asegurando la perfusión de las arterias coronarias en un miocardio asediado.";
+        } else if(type === 'bb') {
+            crash("❌ <strong>Iatrogenia Letal:</strong> La taquicardia sinusal ('Rápido') es el ÚNICO recurso compensatorio para mantener el gasto cardíaco ante la caída del volumen latido. Frenarla causa paro.");
+        } else if(type === 'diu') {
+            crash("❌ <strong>Iatrogenia Letal:</strong> Los diuréticos deplesionan la volemia venosa. El ventrículo pierde su fuerza de empuje (precarga), la presión transmural se vuelve negativa y el corazón se aplasta.");
+        } else if(type === 'vent') {
+            crash("❌ <strong>Iatrogenia Letal:</strong> La Presión Positiva intratorácica bloquea el retorno venoso al corazón derecho. Fulmina instantáneamente a un corazón dependiente de precarga.");
+        }
+    }
+    function crash(msg) {
+        document.getElementById('bp').innerText = "0/0"; document.getElementById('bp').style.color = "#e74c3c";
+        document.getElementById('hr').innerText = "0"; document.getElementById('hr').style.color = "#e74c3c";
+        document.getElementById('co').innerText = "Paro"; document.getElementById('co').style.color = "#e74c3c";
+        document.getElementById('feedback').style.borderColor = "#e74c3c";
+        document.getElementById('feedback').innerHTML = msg;
+    }
+</script>
+</body>
+</html>

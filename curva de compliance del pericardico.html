@@ -1,0 +1,89 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1. Curva de Compliance Pericárdica</title>
+    <style>
+        :root { --bg: #f8f9fa; --card: #fff; --text: #2c3e50; --primary: #3498db; --danger: #e74c3c; --radius: 8px; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 20px; display: flex; justify-content: center; }
+        .container { max-width: 800px; width: 100%; background: var(--card); padding: 25px; border-radius: var(--radius); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        h1 { text-align: center; margin-top: 0; font-size: 1.5em; }
+        .controls { background: #ecf0f1; padding: 20px; border-radius: var(--radius); margin-bottom: 20px; }
+        .slider-group { margin-bottom: 15px; }
+        .slider-group label { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; }
+        input[type="range"] { width: 100%; }
+        .toggle-btn { width: 100%; padding: 12px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; transition: 0.3s; }
+        .btn-agudo { background: var(--danger); }
+        .btn-cronico { background: #8e44ad; }
+        .graph-area { display: flex; align-items: flex-end; height: 250px; background: #ecf0f1; border-left: 2px solid #bdc3c7; border-bottom: 2px solid #bdc3c7; padding: 10px; position: relative; }
+        .bar { width: 100%; background: var(--primary); transition: height 0.3s ease, background 0.3s; display: flex; justify-content: center; align-items: flex-start; color: white; font-weight: bold; padding-top: 5px;}
+        .limit-line { position: absolute; left: 0; right: 0; bottom: 66%; border-top: 2px dashed var(--danger); }
+        .limit-label { position: absolute; top: 30%; right: 10px; color: var(--danger); font-size: 0.8em; font-weight: bold; }
+        .feedback { margin-top: 20px; padding: 15px; border-radius: var(--radius); font-weight: bold; text-align: center; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>1. Biomecánica: Curva de Compliance (C = ΔV / ΔP)</h1>
+    <div class="controls">
+        <button id="btn-tiempo" class="toggle-btn btn-agudo" onclick="toggleTiempo()">Instauración: AGUDA (Minutos/Horas)</button>
+        <p style="font-size: 0.8em; color: #7f8c8d; text-align: center;">El colágeno no tiene tiempo para remodelarse. La coraza es inextensible.</p>
+        <div class="slider-group" style="margin-top: 20px;">
+            <label><span>Volumen de Líquido Acumulado</span> <span id="lbl-vol">0 ml</span></label>
+            <input type="range" id="inp-vol" min="0" max="2000" step="50" value="0" oninput="updateGraph()">
+        </div>
+    </div>
+    <div style="text-align: center; font-weight: bold; margin-bottom: 10px;">Presión Intrapericárdica</div>
+    <div class="graph-area">
+        <div class="limit-line"></div>
+        <div class="limit-label">Umbral de Taponamiento (>20 mmHg)</div>
+        <div id="bar-presion" class="bar" style="height: 0%;">0 mmHg</div>
+    </div>
+    <div id="feedback" class="feedback" style="background: #ecf0f1;">Presiones fisiológicas. Sin compromiso hemodinámico.</div>
+</div>
+<script>
+    let isAgudo = true;
+    function toggleTiempo() {
+        isAgudo = !isAgudo;
+        const btn = document.getElementById('btn-tiempo');
+        btn.innerText = isAgudo ? "Instauración: AGUDA (Minutos/Horas)" : "Instauración: CRÓNICA (Meses)";
+        btn.className = isAgudo ? "toggle-btn btn-agudo" : "toggle-btn btn-cronico";
+        btn.nextElementSibling.innerText = isAgudo ? "El colágeno no tiene tiempo para remodelarse. La coraza es inextensible." : "El tejido remodela su matriz (alta compliance). Acomoda grandes volúmenes.";
+        updateGraph();
+    }
+    function updateGraph() {
+        const vol = parseInt(document.getElementById('inp-vol').value);
+        document.getElementById('lbl-vol').innerText = vol + " ml";
+        let presion = 0;
+        if (isAgudo) {
+            // Curva exponencial severa: 200ml ya causan ~25mmHg
+            presion = Math.pow(vol / 50, 1.8); 
+        } else {
+            // Curva aplanada: 1500ml causan apenas ~15mmHg
+            presion = (vol / 100); 
+        }
+        if (presion > 30) presion = 30; // Max display
+        
+        const bar = document.getElementById('bar-presion');
+        bar.style.height = (presion / 30) * 100 + "%";
+        bar.innerText = Math.round(presion) + " mmHg";
+        
+        const feedback = document.getElementById('feedback');
+        if (presion > 20) {
+            bar.style.background = "var(--danger)";
+            feedback.style.background = "#fadbd8"; feedback.style.color = "#c0392b";
+            feedback.innerText = "¡TAPONAMIENTO CRÍTICO! La distensibilidad (Compliance) ha llegado a cero. El gasto cardíaco colapsa.";
+        } else if (presion > 10) {
+            bar.style.background = "#f39c12";
+            feedback.style.background = "#fcf3cf"; feedback.style.color = "#d35400";
+            feedback.innerText = "Restricción Diastólica. El sistema venoso se ingurgita para compensar.";
+        } else {
+            bar.style.background = "var(--primary)";
+            feedback.style.background = "#ecf0f1"; feedback.style.color = "#2c3e50";
+            feedback.innerText = "Presiones toleradas por la compliance pericárdica.";
+        }
+    }
+</script>
+</body>
+</html>

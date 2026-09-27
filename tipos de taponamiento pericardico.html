@@ -1,0 +1,235 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio: Variantes del Taponamiento Cardíaco</title>
+    <style>
+        :root {
+            --bg: #f0f3f4; --card: #ffffff; --text: #2c3e50;
+            --primary: #2980b9; --success: #27ae60; --warning: #f39c12; --danger: #c0392b;
+            --purple: #8e44ad; --radius: 8px;
+        }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); padding: 20px; display: flex; justify-content: center; }
+        .container { max-width: 1000px; width: 100%; background: var(--card); padding: 25px; border-radius: var(--radius); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+        h1 { text-align: center; margin-top: 0; font-size: 1.6em; color: var(--text); }
+        p.sub { text-align: center; color: #7f8c8d; margin-bottom: 25px; }
+
+        /* Panel de Monitorización Clínica */
+        .monitor-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
+        .monitor-item { background: #34495e; color: white; padding: 15px; border-radius: var(--radius); text-align: center; border-top: 4px solid #bdc3c7; transition: 0.3s; }
+        .m-title { font-size: 0.85em; text-transform: uppercase; color: #bdc3c7; margin-bottom: 8px; }
+        .m-val { font-size: 1.6em; font-weight: bold; }
+        .m-desc { font-size: 0.75em; margin-top: 5px; color: #95a5a6; }
+        
+        .alert-zone { padding: 15px; border-radius: var(--radius); text-align: center; font-weight: bold; margin-bottom: 25px; background: #ecf0f1; border: 1px solid #bdc3c7; transition: 0.3s;}
+        
+        /* Controles Fisiopatológicos */
+        .controls-wrapper { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .control-panel { background: #fdfdfd; padding: 20px; border: 1px solid #eee; border-radius: var(--radius); }
+        .panel-title { font-size: 1.1em; font-weight: bold; margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid var(--primary); padding-bottom: 5px; color: var(--primary); }
+        
+        .slider-group { margin-bottom: 20px; }
+        .slider-group label { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 8px; font-size: 0.9em;}
+        input[type="range"] { width: 100%; cursor: pointer; }
+        
+        /* Intervenciones Iatrogénicas */
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn { padding: 12px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
+        .btn-diuretic { background: var(--warning); color: #333; }
+        .btn-diuretic:hover { background: #e67e22; color: white;}
+        .btn-fluids { background: var(--primary); }
+        .btn-fluids:hover { background: #2471a3; }
+        .btn-reset { background: #95a5a6; grid-column: 1 / -1; }
+        .btn-reset:hover { background: #7f8c8d; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Fenotipos Clínicos del Taponamiento Cardíaco</h1>
+    <p class="sub">Modifique las variables hemodinámicas o aplique intervenciones para observar las variantes clínicas.</p>
+
+    <!-- Monitor del Paciente -->
+    <div class="monitor-board">
+        <div class="monitor-item" id="mon-pa">
+            <div class="m-title">Presión Arterial</div>
+            <div class="m-val" id="val-pa">120/80</div>
+            <div class="m-desc" id="desc-pa">Normal</div>
+        </div>
+        <div class="monitor-item" id="mon-pvc">
+            <div class="m-title">Presión Venosa (PVC)</div>
+            <div class="m-val" id="val-pvc">5 mmHg</div>
+            <div class="m-desc" id="desc-pvc">Venas Planas</div>
+        </div>
+        <div class="monitor-item" id="mon-gc">
+            <div class="m-title">Gasto Cardíaco</div>
+            <div class="m-val" id="val-gc">100%</div>
+            <div class="m-desc" id="desc-gc">Perfusión Óptima</div>
+        </div>
+        <div class="monitor-item" id="mon-pp">
+            <div class="m-title">Pulso Paradójico</div>
+            <div class="m-val" id="val-pp">Ausente</div>
+            <div class="m-desc" id="desc-pp">&lt; 10 mmHg de caída</div>
+        </div>
+    </div>
+
+    <!-- Diagnóstico y Fisiopatología -->
+    <div class="alert-zone" id="diagnostico">
+        <span style="font-size: 1.2em;">Estado Fisiológico Normal</span><br>
+        <span style="font-weight: normal; font-size: 0.9em; color: #34495e;">No hay compresión pericárdica. Las presiones de llenado son adecuadas.</span>
+    </div>
+
+    <div class="controls-wrapper">
+        <!-- Modificadores de Estado -->
+        <div class="control-panel">
+            <h3 class="panel-title">Variables Hemodinámicas</h3>
+            
+            <div class="slider-group">
+                <label><span>Volumen de Efusión Pericárdica</span> <span id="lbl-efusion">0%</span></label>
+                <input type="range" id="inp-efusion" min="0" max="100" step="1" value="0" oninput="calculate()">
+            </div>
+            
+            <div class="slider-group">
+                <label><span>Volemia Intravascular</span> <span id="lbl-volemia">Normovolemia</span></label>
+                <input type="range" id="inp-volemia" min="-50" max="50" step="1" value="0" oninput="calculate()">
+            </div>
+
+            <div class="slider-group">
+                <label><span>Tono Simpático (Adrenérgico)</span> <span id="lbl-simpatico">Basal</span></label>
+                <input type="range" id="inp-simpatico" min="1" max="3" step="0.1" value="1" oninput="calculate()">
+            </div>
+        </div>
+
+        <!-- Acciones Clínicas -->
+        <div class="control-panel">
+            <h3 class="panel-title" style="color: var(--danger); border-color: var(--danger);">Intervenciones Clínicas (Iatrogenia)</h3>
+            <p style="font-size: 0.85em; color: #7f8c8d; margin-top: 0;">Administre fármacos para observar su impacto mecánico en un corazón con derrame.</p>
+            
+            <div class="btn-grid">
+                <button class="btn btn-diuretic" onclick="applyDiuretic()">Administrar Furosemida (Diurético)</button>
+                <button class="btn btn-fluids" onclick="applyFluids()">Sobrecarga Cristaloides (Agresiva)</button>
+                <button class="btn btn-reset" onclick="resetPatient()">Restablecer Paciente</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function calculate() {
+        let efusion = parseInt(document.getElementById('inp-efusion').value);
+        let volemia = parseInt(document.getElementById('inp-volemia').value);
+        let simpatico = parseFloat(document.getElementById('inp-simpatico').value);
+
+        // UI Labels
+        document.getElementById('lbl-efusion').innerText = efusion + "%";
+        document.getElementById('lbl-volemia').innerText = volemia === 0 ? "Normovolemia" : (volemia > 0 ? "+" + volemia + "% (Hipervolemia)" : volemia + "% (Hipovolemia)");
+        document.getElementById('lbl-simpatico').innerText = simpatico === 1 ? "Basal" : (simpatico > 2 ? "Tormenta Adrenérgica" : "Elevado");
+
+        // Fisiopatología
+        let Pip = efusion * 0.25; // Presión Intrapericárdica max 25 mmHg
+        
+        // PVC base depende de la volemia (-50% a +50% modifica la PVC de 2 a 15)
+        let PVC_base = 6 + (volemia * 0.15); 
+        if (PVC_base < 1) PVC_base = 1;
+
+        // Igualación diastólica: Si la Pip supera a la PVC base, la PVC intenta subir pasivamente si hay sangre, 
+        // pero si hay hipovolemia, no logra alcanzarla, colapsando el ventrículo.
+        let PVC_actual = PVC_base;
+        let presionTransmural = PVC_base - Pip;
+
+        if (Pip > PVC_base) {
+            PVC_actual = Pip; // Igualación
+        }
+
+        // Gasto Cardíaco dependiente de la Presión Transmural real efectiva
+        let GC = 100 + (presionTransmural * 5); 
+        if (GC > 100) GC = 100;
+        if (GC < 10) GC = 10; // Límite vital mínimo
+
+        // Presión Arterial
+        let PAS = 120 * (GC / 100) * simpatico;
+        let PAD = 80 * (GC / 100) * (simpatico * 0.8);
+        if (PAS < 50) PAS = 50;
+        if (PAD < 30) PAD = 30;
+
+        // Pulso Paradójico (Depende de efusión alta Y volemia adecuada que permita ingurgitación)
+        let pulsoParadojico = false;
+        if (efusion > 60 && volemia >= -10) {
+            pulsoParadojico = true;
+        }
+
+        // ACTUALIZAR MONITORES
+        // PA
+        document.getElementById('val-pa').innerText = Math.round(PAS) + "/" + Math.round(PAD);
+        document.getElementById('desc-pa').innerText = PAS > 160 ? "Hipertensión Severa" : (PAS < 90 ? "Hipotensión/Shock" : "Mantenida");
+        document.getElementById('mon-pa').style.borderTopColor = PAS < 90 ? "var(--danger)" : (PAS > 160 ? "var(--purple)" : "#bdc3c7");
+
+        // PVC
+        document.getElementById('val-pvc').innerText = Math.round(PVC_actual) + " mmHg";
+        document.getElementById('desc-pvc').innerText = PVC_actual > 12 ? "Ingurgitación Yugular" : (PVC_actual < 5 ? "Venas Colapsadas" : "Venas Normales");
+        document.getElementById('mon-pvc').style.borderTopColor = PVC_actual > 12 ? "var(--warning)" : "#bdc3c7";
+
+        // Gasto Cardiaco
+        document.getElementById('val-gc').innerText = Math.round(GC) + "%";
+        document.getElementById('desc-gc').innerText = GC < 50 ? "Shock Restrictivo" : "Adecuado";
+        document.getElementById('mon-gc').style.borderTopColor = GC < 50 ? "var(--danger)" : "#bdc3c7";
+
+        // Pulso Paradójico
+        document.getElementById('val-pp').innerText = pulsoParadojico ? "Presente" : "Ausente";
+        document.getElementById('desc-pp').innerText = pulsoParadojico ? "> 10 mmHg caída insp." : "Fisiológico";
+        document.getElementById('mon-pp').style.borderTopColor = pulsoParadojico ? "var(--danger)" : "#bdc3c7";
+
+        // LÓGICA DE VARIANTES CLÍNICAS (DIAGNÓSTICO)
+        let diagBox = document.getElementById('diagnostico');
+        
+        if (efusion < 40) {
+            diagBox.style.background = "#ecf0f1"; diagBox.style.borderColor = "#bdc3c7";
+            diagBox.innerHTML = `<span style="font-size: 1.2em; color: #2c3e50;">Efusión Pericárdica Simple</span><br><span style="font-weight: normal; font-size: 0.9em; color: #34495e;">No genera compromiso hemodinámico significativo aún.</span>`;
+        } 
+        else if (efusion >= 40 && simpatico > 2.2) {
+            diagBox.style.background = "#f4ecf7"; diagBox.style.borderColor = "var(--purple)";
+            diagBox.innerHTML = `<span style="font-size: 1.2em; color: var(--purple);">Taponamiento Hipertensivo (Adrenérgico)</span><br><span style="font-weight: normal; font-size: 0.9em; color: #34495e;">La sobrecarga del taponamiento desencadena una respuesta simpática excesiva. <br><strong>Peligro:</strong> Engaña al médico mostrando presión arterial alta (ej. ${Math.round(PAS)} mmHg) a pesar del bajo gasto cardíaco.</span>`;
+        }
+        else if (efusion >= 40 && volemia < -20) {
+            diagBox.style.background = "#fcf3cf"; diagBox.style.borderColor = "var(--warning)";
+            diagBox.innerHTML = `<span style="font-size: 1.2em; color: var(--warning);">Taponamiento de Baja Presión (Hipovolémico)</span><br><span style="font-weight: normal; font-size: 0.9em; color: #34495e;">La falta de volumen impide igualar la presión pericárdica. <br><strong>Espectro Camuflado:</strong> No hay ingurgitación yugular ni pulso paradójico. Se confunde fácilmente con shock séptico o hipovolémico puro.</span>`;
+        }
+        else if (efusion >= 50 && volemia > 30) {
+            diagBox.style.background = "#fadbd8"; diagBox.style.borderColor = "var(--danger)";
+            diagBox.innerHTML = `<span style="font-size: 1.2em; color: var(--danger);">Taponamiento por Sobrecarga de Volumen</span><br><span style="font-weight: normal; font-size: 0.9em; color: #34495e;">El aumento abrupto de la presión venosa central incrementa la filtración al espacio pericárdico, o colapsa el llenado si el pericardio es poco distensible. Agravamiento fatal.</span>`;
+        }
+        else if (efusion >= 60) {
+            diagBox.style.background = "#fadbd8"; diagBox.style.borderColor = "var(--danger)";
+            diagBox.innerHTML = `<span style="font-size: 1.2em; color: var(--danger);">Taponamiento Cardíaco Clásico</span><br><span style="font-weight: normal; font-size: 0.9em; color: #34495e;">Tríada de Beck inminente. Presiones igualadas, pulso paradójico presente y caída crítica del gasto cardíaco por estrangulamiento biventricular.</span>`;
+        }
+    }
+
+    function applyDiuretic() {
+        // El diurético reduce drásticamente la volemia (causando taponamiento de baja presión)
+        document.getElementById('inp-volemia').value = -40;
+        calculate();
+    }
+
+    function applyFluids() {
+        // Los fluidos masivos suben la volemia, pero en un pericardio tenso agravan la falla
+        document.getElementById('inp-volemia').value = 45;
+        // Simula la filtración extra al espacio pericárdico
+        let ef = parseInt(document.getElementById('inp-efusion').value);
+        if(ef > 0) document.getElementById('inp-efusion').value = Math.min(100, ef + 15);
+        calculate();
+    }
+
+    function resetPatient() {
+        document.getElementById('inp-efusion').value = 0;
+        document.getElementById('inp-volemia').value = 0;
+        document.getElementById('inp-simpatico').value = 1;
+        calculate();
+    }
+
+    window.onload = calculate;
+</script>
+
+</body>
+</html>

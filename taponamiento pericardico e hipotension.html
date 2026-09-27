@@ -1,0 +1,175 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio: Engaño Hemodinámico en el Taponamiento</title>
+    <style>
+        :root {
+            --bg: #f8f9fa; --card: #ffffff; --text: #2c3e50;
+            --vs-color: #3498db; /* Volumen Sistólico */
+            --fc-color: #e67e22; /* Frecuencia Cardíaca */
+            --pa-color: #27ae60; /* Presión Arterial */
+            --danger: #c0392b;
+            --radius: 8px;
+        }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); padding: 20px; display: flex; justify-content: center; }
+        .container { max-width: 900px; width: 100%; background: var(--card); padding: 30px; border-radius: var(--radius); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        h1 { text-align: center; margin-top: 0; color: var(--text); font-size: 1.6em;}
+        p.sub { text-align: center; color: #7f8c8d; margin-bottom: 30px; }
+
+        /* Slider de Gravedad */
+        .slider-container { background: #ecf0f1; padding: 20px; border-radius: var(--radius); margin-bottom: 30px; border-left: 5px solid #bdc3c7;}
+        .slider-label { font-weight: bold; display: flex; justify-content: space-between; margin-bottom: 10px; }
+        input[type="range"] { width: 100%; height: 8px; border-radius: 5px; background: #d5dbdb; outline: none; cursor: pointer; -webkit-appearance: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 25px; height: 25px; border-radius: 50%; background: #34495e; cursor: pointer; }
+
+        /* Monitores Hemodinámicos */
+        .monitors { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; }
+        .monitor-card { background: #fdfdfd; border: 1px solid #eee; padding: 15px; border-radius: var(--radius); text-align: center; display: flex; flex-direction: column; justify-content: space-between;}
+        .monitor-title { font-weight: bold; margin-bottom: 15px; font-size: 0.9em; text-transform: uppercase;}
+        
+        /* Barras visuales */
+        .bar-bg { width: 40px; height: 150px; background: #ecf0f1; border-radius: 20px; margin: 0 auto; position: relative; overflow: hidden; }
+        .bar-fill { position: absolute; bottom: 0; left: 0; width: 100%; transition: all 0.3s ease; }
+        
+        #fill-vs { background-color: var(--vs-color); }
+        #fill-fc { background-color: var(--fc-color); }
+        #fill-pa { background-color: var(--pa-color); }
+
+        .monitor-val { font-size: 1.8em; font-weight: bold; margin-top: 15px; }
+        
+        #card-pa { border: 2px solid var(--pa-color); }
+
+        /* Panel de Alerta Clínica */
+        .clinical-status { background: #34495e; color: white; padding: 20px; border-radius: var(--radius); text-align: center; transition: background 0.3s; }
+        .status-title { font-size: 1.2em; font-weight: bold; margin-bottom: 10px; }
+        .status-desc { font-size: 0.95em; line-height: 1.5; }
+
+        .highlight { font-weight: bold; color: #f1c40f; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>El Engaño de la Presión Arterial en el Taponamiento</h1>
+    <p class="sub">Avance la acumulación de líquido pericárdico. Observe qué parámetro cae primero y cuál miente hasta el final.</p>
+
+    <div class="slider-container">
+        <div class="slider-label">
+            <span>Presión Intrapericárdica (Gravedad del Taponamiento)</span>
+            <span id="lbl-severity">0 mmHg (Normal)</span>
+        </div>
+        <input type="range" id="inp-severity" min="0" max="100" step="1" value="0" oninput="updateHemodynamics()">
+    </div>
+
+    <div class="monitors">
+        <!-- Volumen Sistólico -->
+        <div class="monitor-card">
+            <div class="monitor-title" style="color: var(--vs-color);">Volumen Sistólico (Fuerza Real)</div>
+            <div class="bar-bg"><div id="fill-vs" class="bar-fill" style="height: 100%;"></div></div>
+            <div class="monitor-val" id="val-vs" style="color: var(--vs-color);">70 ml</div>
+        </div>
+
+        <!-- Respuesta Simpática -->
+        <div class="monitor-card">
+            <div class="monitor-title" style="color: var(--fc-color);">Reflejo Simpático (FC y Tono)</div>
+            <div class="bar-bg"><div id="fill-fc" class="bar-fill" style="height: 35%;"></div></div>
+            <div class="monitor-val" id="val-fc" style="color: var(--fc-color);">70 lpm</div>
+        </div>
+
+        <!-- Presión Arterial -->
+        <div class="monitor-card" id="card-pa">
+            <div class="monitor-title" style="color: var(--pa-color);">Presión Arterial (El Engaño)</div>
+            <div class="bar-bg"><div id="fill-pa" class="bar-fill" style="height: 100%;"></div></div>
+            <div class="monitor-val" id="val-pa" style="color: var(--pa-color);">120/80</div>
+        </div>
+    </div>
+
+    <div class="clinical-status" id="status-panel">
+        <div class="status-title" id="status-title">Fase 1: Hemodinámica Fisiológica</div>
+        <div class="status-desc" id="status-desc">
+            Las presiones intrapericárdicas son negativas. La presión transmural es óptima, permitiendo un llenado diastólico completo y un volumen sistólico normal.
+        </div>
+    </div>
+</div>
+
+<script>
+    function updateHemodynamics() {
+        const severity = parseInt(document.getElementById('inp-severity').value);
+        
+        let pip = (severity / 100) * 25; 
+        document.getElementById('lbl-severity').innerText = pip.toFixed(1) + " mmHg";
+
+        // MODELO FISIOPATOLÓGICO CORREGIDO
+        // 1. Volumen Sistólico (Cae de 70ml a ~15ml)
+        let vs = 70 - (severity * 0.55); 
+        if (vs < 15) vs = 15;
+
+        // 2. Respuesta Simpática / Frecuencia Cardíaca (Sube para compensar, de 70 a ~135 lpm)
+        let fc = 70 + (severity * 0.65);
+        if (fc > 135) fc = 135;
+
+        // Vasoconstricción Periférica (Multiplicador moderado para mantener normotensión aparente)
+        let rvs = 1 + (severity * 0.005); 
+
+        // 3. Presión Arterial Sistólica (PAS = VS * FC * RVS * Constante)
+        let pasBase = (vs * fc * rvs) / 40.8; 
+        
+        let pas = pasBase;
+        // Agotamiento compensatorio: caída libre de la presión al final del cuadro
+        if (severity > 75) {
+            let colapso = (severity - 75) * 3; 
+            pas -= colapso;
+        }
+        
+        if (pas < 50) pas = 50;
+
+        // ACTUALIZACIÓN VISUAL BARRAS
+        document.getElementById('fill-vs').style.height = (vs / 70) * 100 + "%";
+        document.getElementById('val-vs').innerText = Math.round(vs) + " ml";
+
+        document.getElementById('fill-fc').style.height = (fc / 150) * 100 + "%";
+        document.getElementById('val-fc').innerText = Math.round(fc) + " lpm";
+
+        document.getElementById('fill-pa').style.height = (pas / 150) * 100 + "%";
+        
+        let pad = pas - 40; 
+        if (pad < 30) pad = 30;
+        document.getElementById('val-pa').innerText = Math.round(pas) + "/" + Math.round(pad);
+
+        // PANEL CLÍNICO Y ALERTAS
+        const panel = document.getElementById('status-panel');
+        const title = document.getElementById('status-title');
+        const desc = document.getElementById('status-desc');
+        const cardPa = document.getElementById('card-pa');
+
+        if (severity < 30) {
+            panel.style.background = "#34495e";
+            title.innerText = "Fase 1: Taponamiento Incipiente";
+            desc.innerHTML = "El líquido comienza a acumularse. El volumen sistólico inicia una caída silenciosa. La presión arterial no sufre cambios porque <span class='highlight'>el sistema simpático acaba de despertar</span>.";
+            cardPa.style.borderColor = "var(--pa-color)";
+            document.getElementById('val-pa').style.color = "var(--pa-color)";
+        } 
+        else if (severity >= 30 && severity < 75) {
+            panel.style.background = "#e67e22";
+            title.innerText = "Fase 2: Normotensión Aparente (La Trampa)";
+            desc.innerHTML = "El volumen sistólico está severamente comprometido. Sin embargo, <span class='highlight'>la taquicardia y la vasoconstricción mantienen la presión arterial en rangos engañosamente normales (Normotensión Aparente)</span>. ¡El paciente está en estado crítico aunque su presión parezca estable!";
+            cardPa.style.borderColor = "var(--pa-color)";
+            document.getElementById('val-pa').style.color = "var(--pa-color)";
+        } 
+        else {
+            panel.style.background = "var(--danger)";
+            title.innerText = "Fase 3: Fracaso Adaptativo y Shock Restrictivo";
+            desc.innerHTML = "¡Los mecanismos compensadores se han agotado! El corazón ya no tiene precarga para bombear. <span class='highlight'>La hipotensión aparece de forma súbita y terminal</span>. Esperar a ver esto para diagnosticar taponamiento es casi siempre fatal.";
+            cardPa.style.borderColor = "var(--danger)";
+            document.getElementById('val-pa').style.color = "var(--danger)";
+        }
+    }
+
+    window.onload = updateHemodynamics;
+</script>
+
+</body>
+</html>

@@ -1,0 +1,196 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio v2: Presión Transmural y Llenado</title>
+    <style>
+        :root {
+            --bg: #f4f7f6; --card: #ffffff; --text: #2c3e50;
+            --ventricle: #e74c3c; --pericardium: #3498db;
+            --normal: #27ae60; --warning: #f39c12; --danger: #c0392b;
+            --radius: 8px;
+        }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); padding: 20px; display: flex; justify-content: center; }
+        .container { max-width: 950px; width: 100%; background: var(--card); padding: 25px; border-radius: var(--radius); box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+        h1 { text-align: center; margin-top: 0; font-size: 1.6em; }
+        p.sub { text-align: center; color: #7f8c8d; margin-bottom: 25px; }
+
+        .dashboard { display: flex; gap: 20px; margin-bottom: 30px; align-items: center; }
+        
+        /* Visualizador Físico */
+        .visual-zone {
+            flex: 1; background: #ecf0f1; border-radius: var(--radius); height: 300px;
+            display: flex; justify-content: center; align-items: center; position: relative;
+            overflow: hidden; border: 2px solid #bdc3c7;
+        }
+        .sac-pericardico {
+            position: absolute; background-color: rgba(52, 152, 219, 0.4);
+            border: 3px solid var(--pericardium); border-radius: 50%;
+            display: flex; justify-content: center; align-items: center; transition: all 0.3s ease;
+        }
+        .ventriculo {
+            background-color: var(--ventricle); border-radius: 50%; display: flex;
+            justify-content: center; align-items: center; color: white; font-weight: bold;
+            font-size: 1.2em; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: inset -10px -10px 20px rgba(0,0,0,0.3);
+        }
+
+        /* Panel de Métricas */
+        .metrics-zone { flex: 1; display: flex; flex-direction: column; gap: 15px; }
+        .metric-card {
+            background: #34495e; color: white; padding: 15px; border-radius: var(--radius); text-align: center;
+            transition: background 0.3s;
+        }
+        .formula { font-family: monospace; font-size: 1.2em; margin-bottom: 5px; color: #ecf0f1; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 4px;}
+        .val-big { font-size: 2.2em; font-weight: bold; margin: 5px 0; }
+        .status-badge { display: inline-block; padding: 5px 15px; border-radius: 15px; font-weight: bold; font-size: 0.9em; background: rgba(0,0,0,0.2); }
+
+        /* Controles */
+        .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .control-group { background: #fdfdfd; border: 1px solid #ddd; padding: 15px; border-radius: var(--radius); }
+        .control-header { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 15px; }
+        input[type="range"] { width: 100%; cursor: pointer; }
+        
+        .scenarios { display: flex; gap: 10px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+        .btn { padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; background: #7f8c8d; transition: 0.2s; }
+        .btn:hover { background: #34495e; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Dinámica de la Presión Transmural (Regla de Signos)</h1>
+    <p class="sub">Observe cómo la presión intrapericárdica negativa (inspiración) suma fuerza de distensión, y cómo el líquido a tensión la anula.</p>
+
+    <div class="dashboard">
+        <div class="visual-zone">
+            <div id="sac" class="sac-pericardico" style="width: 250px; height: 250px;">
+                <div id="ventricle" class="ventriculo" style="width: 200px; height: 200px;">VD</div>
+            </div>
+        </div>
+
+        <div class="metrics-zone">
+            <div class="metric-card" id="card-ptm">
+                <div class="formula" id="math-display">Ptm = 8 - (-5) = 13 mmHg</div>
+                <div>Fuerza Neta de Distensión (Ptm)</div>
+                <div class="val-big" id="val-ptm">+13 mmHg</div>
+                <div class="status-badge" id="badge-status">Efecto Succión (Inspiración)</div>
+            </div>
+            
+            <div class="metric-card" style="background: #2c3e50;">
+                <div>Llenado Diastólico Efectivo</div>
+                <div class="val-big" id="val-vs">100%</div>
+                <div style="font-size: 0.8em; color: #bdc3c7;">Capacidad de expansión del ventrículo</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls-grid">
+        <div class="control-group">
+            <h3 style="color: var(--ventricle); margin-top: 0; border-bottom: 2px solid var(--ventricle); padding-bottom: 5px;">Presión Venosa (Pic)</h3>
+            <p style="font-size: 0.85em; color: #7f8c8d;">Presión intracavitaria (Precarga).</p>
+            <div class="control-header">
+                <span>Pic</span> <span id="lbl-pic" style="color: var(--ventricle);">8 mmHg</span>
+            </div>
+            <input type="range" id="inp-pic" min="0" max="30" step="1" value="8" oninput="calculateDynamics()">
+        </div>
+
+        <div class="control-group">
+            <h3 style="color: var(--pericardium); margin-top: 0; border-bottom: 2px solid var(--pericardium); padding-bottom: 5px;">Presión Pericárdica (Pip)</h3>
+            <p style="font-size: 0.85em; color: #7f8c8d;">De -5 a +5 es normal. Mayor a 5 indica derrame o taponamiento.</p>
+            <div class="control-header">
+                <span>Pip</span> <span id="lbl-pip" style="color: var(--pericardium);">-5 mmHg</span>
+            </div>
+            <input type="range" id="inp-pip" min="-10" max="30" step="1" value="-5" oninput="calculateDynamics()">
+        </div>
+    </div>
+
+    <div class="scenarios">
+        <button class="btn" onclick="setValues(8, -5)" style="background: #2980b9;">Fisiología: Inspiración (-5)</button>
+        <button class="btn" onclick="setValues(8, 4)" style="background: #27ae60;">Fisiología: Espiración (+4)</button>
+        <button class="btn" onclick="setValues(8, 12)" style="background: #e67e22;">Derrame (Restricción)</button>
+        <button class="btn" onclick="setValues(18, 12)" style="background: #8e44ad;">Compensación Venosa</button>
+        <button class="btn" onclick="setValues(15, 20)" style="background: #c0392b;">Taponamiento (Igualación)</button>
+    </div>
+</div>
+
+<script>
+    function calculateDynamics() {
+        const pic = parseInt(document.getElementById('inp-pic').value);
+        const pip = parseInt(document.getElementById('inp-pip').value);
+        
+        // Ecuación de Presión Transmural (Matemática pura que resuelve los negativos)
+        const ptm = pic - pip;
+
+        // Mostrar la matemática explícita al alumno
+        let mathStr = `Ptm = ${pic} - (${pip}) = ${ptm}`;
+        document.getElementById('math-display').innerText = mathStr;
+
+        document.getElementById('lbl-pic').innerText = pic + " mmHg";
+        document.getElementById('lbl-pip').innerText = pip + " mmHg";
+        document.getElementById('val-ptm').innerText = (ptm > 0 ? "+" : "") + ptm + " mmHg";
+
+        // Lógica Fisiopatológica de Llenado
+        let vs = 0;
+        let sizeVentricle = 50; 
+        
+        // El color y tamaño del saco refleja la presión Pip
+        let baseOpacity = pip < 0 ? 0 : (pip / 30) * 0.8;
+        let opacitySac = Math.max(0.1, baseOpacity);
+
+        const cardPtm = document.getElementById('card-ptm');
+        const badge = document.getElementById('badge-status');
+
+        if (ptm >= 8) {
+            // Rango de máxima expansión (ayudada por la presión negativa)
+            vs = 100;
+            sizeVentricle = 210;
+            cardPtm.style.background = "var(--primary)";
+            badge.innerText = "Llenado Facilitado (Succión)";
+        } else if (ptm > 0 && ptm < 8) {
+            // Llenado normal pero sin efecto de succión masiva
+            vs = 50 + ((ptm/8) * 50); 
+            sizeVentricle = 120 + ((ptm/8) * 80);
+            cardPtm.style.background = "var(--normal)";
+            badge.innerText = ptm <= 4 ? "Límite Fisiológico" : "Llenado Normal";
+        } else if (ptm <= 0 && ptm > -5) {
+            vs = 20; 
+            sizeVentricle = 80;
+            cardPtm.style.background = "var(--warning)";
+            badge.innerText = "Restricción Diastólica Severa";
+        } else {
+            vs = 5; 
+            sizeVentricle = 50; 
+            cardPtm.style.background = "var(--danger)";
+            badge.innerText = "¡COLAPSO CAVITARIO!";
+        }
+
+        // Actualizar UI Visual
+        document.getElementById('val-vs').innerText = Math.round(vs) + "%";
+        document.getElementById('val-vs').style.color = vs < 50 ? "#e74c3c" : "#2ecc71";
+        
+        const vent = document.getElementById('ventricle');
+        vent.style.width = sizeVentricle + "px";
+        vent.style.height = sizeVentricle + "px";
+        
+        const sac = document.getElementById('sac');
+        sac.style.backgroundColor = `rgba(52, 152, 219, ${opacitySac})`;
+        let sizeSac = pip <= 5 ? 240 : 220 + (pip * 2);
+        sac.style.width = sizeSac + "px";
+        sac.style.height = sizeSac + "px";
+    }
+
+    function setValues(pic, pip) {
+        document.getElementById('inp-pic').value = pic;
+        document.getElementById('inp-pip').value = pip;
+        calculateDynamics();
+    }
+
+    // Inicializar
+    window.onload = calculateDynamics;
+</script>
+
+</body>
+</html>

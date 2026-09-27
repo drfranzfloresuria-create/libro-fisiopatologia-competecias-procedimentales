@@ -1,0 +1,259 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio Ecocardiográfico: Interdependencia y Taponamiento</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --panel-bg: #2c3e50;
+            --text-light: #ecf0f1;
+            --fluid-color: #000000;
+            --tissue-color: #7f8c8d;
+            --blood-color: #c0392b;
+            --blood-right: #2980b9;
+            --highlight: #e74c3c;
+            --radius: 8px;
+        }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg-color); color: var(--text-light); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { max-width: 1050px; width: 100%; background: var(--panel-bg); padding: 25px; border-radius: var(--radius); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { text-align: center; margin-top: 0; font-size: 1.6em; color: #ecf0f1; }
+        p.sub { text-align: center; color: #bdc3c7; margin-bottom: 25px; font-size: 0.95em; }
+
+        .app-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
+
+        /* Pantalla del Ecocardiograma */
+        .echo-screen { background: #000; border: 4px solid #7f8c8d; border-radius: var(--radius); position: relative; height: 420px; display: flex; justify-content: center; align-items: center; overflow: hidden; box-shadow: inset 0 0 50px rgba(255,255,255,0.1); flex-direction: column;}
+        .echo-label { position: absolute; top: 10px; left: 10px; color: #2ecc71; font-family: monospace; font-size: 1.2em; z-index: 10;}
+
+        /* Saco Pericárdico y Derrame */
+        .pericardium {
+            width: 320px; height: 350px; border: 2px dashed #95a5a6; border-radius: 50% 50% 40% 40%;
+            display: flex; justify-content: center; align-items: center; position: relative;
+            background-color: #2c3e50; transition: padding 0.5s ease;
+        }
+        .effusion-space {
+            width: 100%; height: 100%; background-color: var(--fluid-color); border-radius: 50% 50% 40% 40%;
+            display: flex; justify-content: center; align-items: center; transition: all 0.5s ease;
+        }
+
+        /* Corazón Estilizado con Tabique Dinámico */
+        .heart-model {
+            width: 200px; height: 260px;
+            display: flex; flex-wrap: wrap; justify-content: center; align-content: center;
+            background: var(--tissue-color); padding: 8px; border-radius: 50% 50% 20% 20%;
+            transition: transform 0.5s ease; position: relative; gap: 4px;
+        }
+        
+        /* Contenedores de Ventrículos para efecto de abombamiento */
+        .ventricles-container { display: flex; width: 100%; height: 60%; position: relative; justify-content: space-between;}
+        .atria-container { display: flex; width: 100%; height: 38%; position: relative; justify-content: space-between;}
+
+        .chamber {
+            display: flex; justify-content: center; align-items: center;
+            color: #ecf0f1; font-weight: bold; font-family: monospace; font-size: 1.2em;
+            position: relative; transition: all 0.4s ease; overflow: hidden;
+        }
+
+        /* Cavidades */
+        #rv { width: 48%; background: var(--blood-right); border-radius: 50% 5px 5px 5px; transform-origin: left center; z-index: 2;}
+        #lv { width: 48%; background: var(--blood-color); border-radius: 5px 50% 5px 5px; transform-origin: right center; z-index: 1;}
+        #ra { width: 48%; background: var(--blood-right); border-radius: 5px 5px 5px 30%; transform-origin: left center;}
+        #la { width: 48%; background: var(--blood-color); border-radius: 5px 5px 30% 5px; }
+
+        /* Panel de Control Clínico */
+        .clinical-panel { display: flex; flex-direction: column; gap: 15px; }
+        .control-box { background: #34495e; padding: 15px; border-radius: var(--radius); }
+        .control-box label { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 10px; }
+        input[type="range"] { width: 100%; cursor: pointer; }
+
+        .btn-toggle {
+            width: 100%; padding: 12px; background: #e67e22; border: none; border-radius: 5px; color: white;
+            font-weight: bold; cursor: pointer; font-size: 1em; transition: 0.3s;
+        }
+        .btn-toggle.active { background: #27ae60; }
+
+        /* Tarjetas de Diagnóstico */
+        .diag-card { background: #22313f; padding: 12px; border-left: 5px solid #bdc3c7; border-radius: 4px; transition: 0.3s; }
+        .diag-title { font-weight: bold; font-size: 1em; margin-bottom: 5px; color: #ecf0f1;}
+        .diag-desc { font-size: 0.85em; color: #bdc3c7; line-height: 1.4;}
+        .active-phase { border-left-color: var(--highlight); background: #3b2a2a; }
+        .active-phase .diag-title { color: var(--highlight); }
+
+        /* Monitores Hemodinámicos Internos */
+        .metrics-hud {
+            display: flex; justify-content: space-between; width: 100%; margin-top: 15px; padding: 0 10px;
+        }
+        .hud-box {
+            background: rgba(0,0,0,0.6); border: 1px solid #7f8c8d; padding: 8px 12px; border-radius: 4px;
+            text-align: center; width: 45%;
+        }
+        .hud-val { font-size: 1.4em; font-weight: bold; font-family: monospace; margin: 5px 0;}
+        .hud-title { font-size: 0.7em; color: #bdc3c7; text-transform: uppercase;}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Ecocardiografía y Estrangulamiento Bi-Causal (VI)</h1>
+    <p class="sub">Observe la interdependencia biventricular: cómo el colapso del VD y el tabique aplastan al VI durante la inspiración.</p>
+
+    <div class="app-grid">
+        <div class="echo-screen">
+            <div class="echo-label">APICAL 4C</div>
+            
+            <div class="pericardium">
+                <div class="effusion-space" id="effusion">
+                    <div class="heart-model" id="heart">
+                        <div class="ventricles-container">
+                            <div class="chamber" id="rv">VD</div>
+                            <div class="chamber" id="lv">VI</div>
+                        </div>
+                        <div class="atria-container">
+                            <div class="chamber" id="ra">AD</div>
+                            <div class="chamber" id="la">AI</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HUD de Gasto y Precarga -->
+            <div class="metrics-hud">
+                <div class="hud-box">
+                    <div class="hud-title">Gasto Cardíaco VD</div>
+                    <div class="hud-val" id="hud-rv-out" style="color: #3498db;">100%</div>
+                </div>
+                <div class="hud-box">
+                    <div class="hud-title">Precarga de VI</div>
+                    <div class="hud-val" id="hud-lv-pre" style="color: #e74c3c;">100%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="clinical-panel">
+            <div class="control-box">
+                <label>
+                    <span>Gravedad del Taponamiento</span>
+                    <span id="lbl-vol" style="color: #e74c3c;">0%</span>
+                </label>
+                <input type="range" id="inp-vol" min="0" max="100" step="1" value="0" oninput="updateEcho()">
+            </div>
+
+            <button class="btn-toggle" id="btn-resp" onclick="toggleRespiration()">Fase Respiratoria: ESPIRACIÓN</button>
+
+            <div class="diag-card" id="phase-1">
+                <div class="diag-title">Colapso Diastólico de Cavidades Derechas</div>
+                <div class="diag-desc">Al superar el umbral crítico, la pared libre del VD se invagina. El gasto cardíaco del VD comienza a retenerse en la circulación pulmonar, reduciendo el flujo hacia el VI.</div>
+            </div>
+
+            <div class="diag-card" id="phase-2">
+                <div class="diag-title">Interdependencia y Desvío del Tabique (Inspiración)</div>
+                <div class="diag-desc">La inspiración aumenta el retorno venoso al VD. Al no poder expandirse hacia afuera por el líquido a tensión, <strong>el VD se abomba hacia la izquierda</strong>, desplazando el tabique y colapsando la geometría del VI.</div>
+            </div>
+
+            <div class="diag-card" id="phase-3">
+                <div class="diag-title">Estrangulamiento Bi-Causal de Precarga (VI)</div>
+                <div class="diag-desc">El VI sufre doble ataque: (1) Su espacio físico es invadido por el tabique. (2) Recibe menos sangre porque el VD falló. El volumen latido cae drásticamente (Pulso Paradójico).</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let isInspiration = false;
+
+    function toggleRespiration() {
+        isInspiration = !isInspiration;
+        const btn = document.getElementById('btn-resp');
+        if(isInspiration) {
+            btn.innerText = "Fase Respiratoria: INSPIRACIÓN PROFUNDA";
+            btn.classList.add('active');
+        } else {
+            btn.innerText = "Fase Respiratoria: ESPIRACIÓN";
+            btn.classList.remove('active');
+        }
+        updateEcho();
+    }
+
+    function updateEcho() {
+        const vol = parseInt(document.getElementById('inp-vol').value);
+        document.getElementById('lbl-vol').innerText = vol + "%";
+
+        const effusion = document.getElementById('effusion');
+        const heart = document.getElementById('heart');
+        const rv = document.getElementById('rv');
+        const lv = document.getElementById('lv');
+        const ra = document.getElementById('ra');
+        
+        const hudRV = document.getElementById('hud-rv-out');
+        const hudLV = document.getElementById('hud-lv-pre');
+        const p1 = document.getElementById('phase-1');
+        const p2 = document.getElementById('phase-2');
+        const p3 = document.getElementById('phase-3');
+
+        // Tamaño del derrame y corazón
+        effusion.style.padding = ((vol / 100) * 40) + "px";
+        heart.style.transform = `scale(${1 - (vol / 100) * 0.15})`;
+
+        // Reseteo visual
+        p1.classList.remove('active-phase'); p2.classList.remove('active-phase'); p3.classList.remove('active-phase');
+        rv.style.borderRadius = "50% 5px 5px 5px"; rv.style.clipPath = "none"; rv.style.width = "48%";
+        lv.style.borderRadius = "5px 50% 5px 5px"; lv.style.width = "48%"; lv.style.marginLeft = "0";
+        ra.style.clipPath = "none";
+
+        let rvOutput = 100;
+        let lvPreload = 100;
+
+        if (vol >= 35 && vol < 70) {
+            // Colapso AD
+            ra.style.clipPath = `polygon(30% 0%, 100% 0%, 100% 100%, 15% 100%)`;
+        }
+        
+        if (vol >= 60) {
+            // Taponamiento Severo - Colapso de pared libre VD
+            p1.classList.add('active-phase');
+            ra.style.clipPath = `polygon(50% 0%, 100% 0%, 100% 100%, 25% 100%)`;
+            
+            // La pared libre derecha se aplasta (Clip-path en el lado izquierdo de la imagen)
+            rv.style.clipPath = `polygon(35% 0%, 100% 0%, 100% 100%, 15% 100%)`;
+            rvOutput = 100 - ((vol - 60) * 1.5);
+
+            if (isInspiration) {
+                // Interdependencia Ventricular: El tabique se desvía al VI
+                p2.classList.add('active-phase');
+                p3.classList.add('active-phase');
+                
+                // Efecto visual: El VD se abomba hacia la derecha (hacia el VI)
+                rv.style.borderRadius = "10px 50% 50% 10px";
+                rv.style.width = "60%"; // El VD toma espacio
+                rv.style.zIndex = "3";
+                
+                // El VI se encoge y su tabique (lado izquierdo) es invadido
+                lv.style.width = "36%";
+                lv.style.marginLeft = "-4%"; // Se solapan
+                lv.style.borderRadius = "30% 50% 5px 30%"; // Se deforma la geometría del VI
+                
+                // Estrangulamiento bi-causal: Cae el retorno del pulmón (RV Output) + Cae espacio físico
+                lvPreload = rvOutput - 25; // Impacto dramático
+            } else {
+                // Espiración en taponamiento (El tabique regresa, pero sigue el bajo gasto)
+                lvPreload = rvOutput - 5; 
+            }
+        }
+
+        // Límites y actualización de HUD
+        if(rvOutput < 20) rvOutput = 20;
+        if(lvPreload < 10) lvPreload = 10;
+        
+        hudRV.innerText = Math.round(rvOutput) + "%";
+        hudLV.innerText = Math.round(lvPreload) + "%";
+        
+        if(lvPreload < 50) hudLV.style.color = "#c0392b"; else hudLV.style.color = "#e74c3c";
+    }
+
+    window.onload = updateEcho;
+</script>
+
+</body>
+</html>
